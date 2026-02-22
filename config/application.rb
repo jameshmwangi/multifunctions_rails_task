@@ -27,6 +27,5 @@ module RailsFunctionsTaskApp
     # the framework and any gems in your application.
 
     config.active_job.queue_adapter = :sidekiq
-    config.active_storage.variant_processor = :vips
   end
 end
