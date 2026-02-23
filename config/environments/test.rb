@@ -44,6 +44,10 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
+  # Use test adapter for Active Job so that deliver_later works without Redis
+  # and perform_enqueued_jobs / enqueued_jobs helpers function correctly.
+  config.active_job.queue_adapter = :test
+
   # Raises error for missing translations.
   # config.action_view.raise_on_missing_translations = true
 end

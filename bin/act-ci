@@ -1,0 +1,70 @@
+#!/bin/bash
+# Run GitHub Actions CI locally using act
+# Usage: ./bin/act-ci [options]
+#   --stop-at STEP   Stop after the named step (e.g. "Rspec Results")
+#   --dry-run        Only show what would run
+#   --help           Show this help
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Check dependencies
+if ! command -v act &>/dev/null; then
+  echo "Error: 'act' is not installed."
+  echo "Install it with: curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash"
+  exit 1
+fi
+
+if ! command -v docker &>/dev/null; then
+  echo "Error: 'docker' is not installed or not in PATH."
+  exit 1
+fi
+
+# Parse arguments
+DRY_RUN=""
+EXTRA_ARGS=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --dry-run)
+      DRY_RUN="-n"
+      shift
+      ;;
+    --help)
+      head -6 "$0" | tail -4
+      exit 0
+      ;;
+    *)
+      EXTRA_ARGS="$EXTRA_ARGS $1"
+      shift
+      ;;
+  esac
+done
+
+# Stop local PostgreSQL if running on port 5432 (act needs it for the postgres service container)
+PG_WAS_RUNNING=false
+if pg_isready -q 2>/dev/null; then
+  echo "⏸  Stopping local PostgreSQL (port 5432 needed by act)..."
+  sudo systemctl stop postgresql
+  PG_WAS_RUNNING=true
+fi
+
+cleanup() {
+  if $PG_WAS_RUNNING; then
+    echo "▶  Restarting local PostgreSQL..."
+    sudo systemctl start postgresql
+  fi
+}
+trap cleanup EXIT
+
+echo "🚀 Running GitHub Actions CI locally..."
+echo ""
+
+act push \
+  --env-file .env.act \
+  -j build \
+  $DRY_RUN \
+  $EXTRA_ARGS
+
+echo ""
+echo "✅ act run complete."
